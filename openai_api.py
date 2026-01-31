@@ -14,7 +14,7 @@ import xmlrpc.client
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Constants
 MAX_RESPONSE_SIZE = 50 * 1024  # 50KB max response size
@@ -134,8 +134,11 @@ class ReadRequest(BaseModel):
     fields: Optional[List[str]] = None
 
 class CreateRequest(BaseModel):
+    """Request body for creating a record."""
+    model_config = {"populate_by_name": True}
+    
     model: str
-    values: Dict[str, Any]
+    field_values: Dict[str, Any] = Field(alias="values")
 
 class UpdateRequest(BaseModel):
     model: str
@@ -231,13 +234,13 @@ async def create_record(request: CreateRequest):
     
     Args:
         model: Odoo model name
-        values: Dictionary of field values for the new record
+        values: Dictionary of field values for the new record (sent as "values" in JSON)
     
     Returns:
         ID of the created record
     """
     try:
-        record_id = odoo.execute(request.model, 'create', request.values)
+        record_id = odoo.execute(request.model, 'create', request.field_values)
         return {"id": record_id, "success": True}
         
     except Exception as e:
